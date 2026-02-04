@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Main Server
+  postgres:
+    image: postgres:16-alpine
+    container_name: flanux-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: flanux_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-flanux_secure_password_2024}
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql
+      - ./schemas:/docker-entrypoint-initdb.d/schemas
+    networks:
+      - flanux-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flanux_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PgAdmin for Database Management (Optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: flanux-pgadmin
+    restart: unless-stopped
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@flanux.com
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - flanux-network
+    depends_on:
+      - postgres
+
+  # Redis (for caching and sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: flanux-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - flanux-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  flanux-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  pgadmin-data:
+    driver: local
+  redis-data:
+    driver: local
