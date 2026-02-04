@@ -1,4 +1,4 @@
-# Flanux Microservices - PostgreSQL Database Setup
+# PostgreSQL Database Setup
 
 Complete database infrastructure for all 8 microservices + auth service.
 
